@@ -16,12 +16,12 @@ Este proyecto usa **Django** y está gestionado dentro de un entorno virtual cre
 
 ### 2. Crear y activar el entorno Conda
 
-conda env create -f environment.yml
+conda env create -f environment.yml <br>
 conda activate env
 
 ### 3. Ejecutar el servidor Django
 
-cd contenedor_inteligente_web
+cd contenedor_inteligente_web <br>
 python manage.py runserver
 
 # Notas adicionales
