@@ -35,3 +35,6 @@ Este proyecto usa **Django** y está gestionado dentro de un entorno virtual cre
    ```bash
 conda env export > environment.yml
    ```
+
+
+## Guía rápida para instalar y ejecutar el proyecto
