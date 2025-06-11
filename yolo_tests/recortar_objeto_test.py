@@ -1,10 +1,13 @@
 from ultralytics import YOLO
+import torch
 import cv2
 import os
 
 model = YOLO("yolo11n.pt")
-#results = model.predict(source='dog.png', device='cuda')
-results = model.predict(source='cats.png', device='cuda')
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+#results = model.predict(source='dog.png', device=device)
+results = model.predict(source='cats.png', device=device)
 
 # Tomamos el primer resultado (una sola imagen procesada)
 res = results[0]
