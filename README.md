@@ -16,11 +16,27 @@ Este proyecto usa **Django** y está gestionado dentro de un entorno virtual cre
 
 ### 2. Crear y activar el entorno Conda
 
+
+- Usá el script `manage_env.sh` para manejar las dependencias. Formato del comando:
    ```bash
-    conda env create -f environment.yml
+   bash manage_env.sh [ -p | -u | -c ] [cpu|gpu (opcional, default=cpu)]
    ```
+   - `-c`: Crear el entorno (solo una vez)
+   - `-p`: Subir/pushear cambios en las dependencias
+   - `-u`: Actualizar tus dependencias locales luego de hacer pull
+
+   **Ejemplos usando CPU** (por defecto se usa `cpu` si no se especifica):
    ```bash
-    conda activate env
+   bash manage_env.sh -c         # Crear entorno
+   bash manage_env.sh -p         # Pushear dependencias nuevas
+   bash manage_env.sh -u         # Actualizar dependencias locales
+   ```
+
+   > *Nota:* Actualmente el script `manage_env.sh` solo diferencia entre CPU y GPU para `torch`. Si en el futuro hay más paquetes con esta distinción, se deberá ajustar el script.
+
+- Para activar el entorno:
+   ```bash
+   conda activate env_contenedor_inteligente
    ```
 
 ### 3. Ejecutar el servidor Django
@@ -28,13 +44,5 @@ Este proyecto usa **Django** y está gestionado dentro de un entorno virtual cre
     cd contenedor_inteligente_web
     python manage.py runserver
    ```
-
-# Notas adicionales
-
-### Si agregás nuevas dependencias, acordate de actualizar el archivo environment.yml con:
-   ```bash
-conda env export > environment.yml
-   ```
-
 
 ## Guía rápida para instalar y ejecutar el proyecto
