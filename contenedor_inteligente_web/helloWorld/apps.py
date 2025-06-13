@@ -1,12 +1,24 @@
 from django.apps import AppConfig
+from django.conf import settings 
 import threading
 import signal
 import os
-from .test_hilos import test_hilo
+from .test_hilos.test_hilo import TestHilo
 
 class HelloworldConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'helloWorld'
+    
+    def __init__(self, app_name, app_module):
+        super().__init__(app_name, app_module)
+        self.tareas = [TestHilo(), TestHilo()]
+        self.threads = []
+        self.original_handlers = {}
+
+    def init_thread(self, to_thread):
+        t = threading.Thread(target=to_thread.run)
+        t.start()
+        self.threads.append(t)
 
     def ready(self):
         # Solo en proceso principal (evita doble ejecución en desarrollo)
@@ -20,28 +32,29 @@ class HelloworldConfig(AppConfig):
             signal.signal(signal.SIGINT, self.handle_exit)
             signal.signal(signal.SIGTERM, self.handle_exit)
             
-            # Iniciar el thread como no-daemon
-            self.thread = threading.Thread(target=test_hilo.procesar_fotos)
-            self.thread.daemon = False  # IMPORTANTE: debe ser False para usar join()
-            self.thread.start()
+            for script in self.tareas:
+                self.init_thread(script)
+
 
     def handle_exit(self, signum, frame):
-        print(f"\nRecibida señal {signum}, deteniendo hilo...")
+        print(f"\nRecibida señal {signum}, deteniendo hilos...")
         
-        # Solicitar detención al hilo
-        test_hilo.stop()
-        
-        # Esperar máximo 3 segundos a que termine
-        self.thread.join(timeout=3.0)
-        
-        if self.thread.is_alive():
-            print("⚠️ hilo no terminó a tiempo, forzando salida")
-        else:
-            print("✅ hilo detenido correctamente")
-        
+        # Parar hilos
+        for tarea in self.tareas:
+            tarea.stop()
+
+        # Esperar máximo 3 segundos a que terminen
+        for idx, t in enumerate(self.threads):
+            t.join(timeout=3.0)
+            if t.is_alive():
+                print(f"⚠️ Hilo #{idx} no terminó a tiempo")
+            else:
+                print(f"✅ Hilo #{idx} detenido")
+
         # Restaurar manejadores originales y terminar
         signal.signal(signal.SIGINT, self.original_handlers[signal.SIGINT])
         signal.signal(signal.SIGTERM, self.original_handlers[signal.SIGTERM])
         
         # Ejecutar el manejador original de Django
-        self.original_handlers[signum](signum, frame)
+        if callable(self.original_handlers[signum]):
+            self.original_handlers[signum](signum, frame)
