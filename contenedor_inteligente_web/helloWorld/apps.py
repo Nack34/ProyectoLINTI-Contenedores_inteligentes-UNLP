@@ -3,7 +3,8 @@ from django.conf import settings
 import threading
 import signal
 import os
-from .test_hilos.test_hilo import TestHilo
+from .hilos_background.test_hilo import TestHilo
+from .hilos_background.procesar_imagen import ProcesarImagen
 
 class HelloworldConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -11,7 +12,8 @@ class HelloworldConfig(AppConfig):
     
     def __init__(self, app_name, app_module):
         super().__init__(app_name, app_module)
-        self.tareas = [TestHilo(), TestHilo()]
+        #self.tareas = [TestHilo(), ProcesarImagen()]
+        self.tareas = [ProcesarImagen()]
         self.threads = []
         self.original_handlers = {}
 
