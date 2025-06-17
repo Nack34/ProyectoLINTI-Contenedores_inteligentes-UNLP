@@ -1,9 +1,9 @@
-from ultralytics import YOLO
+from .models import load_trimmer_model
 import torch
 import cv2
 import os
 
-model = YOLO("yolo11n.pt")
+model = load_trimmer_model()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def recortar_img(filename, dir_img_processed):

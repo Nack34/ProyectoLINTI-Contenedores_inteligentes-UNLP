@@ -6,8 +6,6 @@ import shutil
 import sys
 
 from .hilo_background import HiloBackground
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from image_processing.recortar_objetos import recortar_img
 
 
@@ -42,7 +40,7 @@ class ProcesarImagen(HiloBackground):
         recortar_img(filename, dir_img_processed)
 
     def run(self):
-        print("🟢 Hilo YOLO iniciado")
+        print("🟢 Hilo 'Procesar Imagenes' iniciado")
         cap = cv2.VideoCapture(0)  # Usa la cámara por defecto. Esto despues cambiarlo para q sea la camara q se quiere
 
         dir_img_base = f'{self.dir_base}/base'
@@ -52,7 +50,7 @@ class ProcesarImagen(HiloBackground):
 
         i = 0
         while self.running:
-            print(f"Hilo YOLO ejecutándose por {i} vez")
+            print(f"Hilo 'Procesar Imagenes' ejecutándose por {i} vez")
             
             self.capturar_imagen(cap, dir_img_base, i)
             self.procesar_img(dir_img_base, dir_img_processed, i)
@@ -61,5 +59,5 @@ class ProcesarImagen(HiloBackground):
             time.sleep(1)
 
         cap.release()
-        print("🔴 Hilo YOLO detenido")
+        print("🔴 Hilo 'Procesar Imagenes' detenido")
 
