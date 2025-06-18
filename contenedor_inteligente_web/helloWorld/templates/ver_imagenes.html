@@ -8,16 +8,15 @@
     <img src="{{ MEDIA_URL }}{{ imagen_base }}" alt="foto_0" width="500">
 
     <h2>Objetos detectados</h2>
-    {% for img in imagenes_objetos %}
-        <img src="{{ MEDIA_URL }}{{ img }}" alt="objeto" width="200" style="margin: 10px;">
-    {% empty %}
+    {% if objetos_y_predicciones %}
+        {% for img, pred in objetos_y_predicciones %}
+            <div style="display: inline-block; text-align: center; margin: 10px;">
+                <img src="{{ MEDIA_URL }}{{ img }}" alt="objeto" width="200">
+                <p>{{ pred }}</p>
+            </div>
+        {% endfor %}
+    {% else %}
         <p>No hay imágenes procesadas aún.</p>
-    {% endfor %}
-    
-    <!--
-    <p>MEDIA_URL = "{{ MEDIA_URL }}"</p>
-    <p>imagen_base = "{{ imagen_base }}"</p>
-    -->
-
+    {% endif %}
 </body>
 </html>
