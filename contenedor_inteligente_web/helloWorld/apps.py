@@ -13,7 +13,8 @@ class HelloworldConfig(AppConfig):
     def __init__(self, app_name, app_module):
         super().__init__(app_name, app_module)
         #self.tareas = [TestHilo(), ProcesarImagen()]
-        self.tareas = [ProcesarImagen()]
+        # self.tareas = [ProcesarImagen()]
+        self.tareas = []
         self.threads = []
         self.original_handlers = {}
 

@@ -8,5 +8,19 @@
 <body>
     <h1> Hello  </h1>
     <a href="{% url 'World' %}">Ir a World</a>
+    <a href="{% url 'ver_imagenes' %}">Ir a Ver Imagenes</a>
+    <a href="{% url 'video_feed' %}">Ir a Video Feed</a>
+    <img src="{% url 'video_feed' %}" width="640" height="480" />
+
+    <button onclick="prender(1)">Prender LED 1</button>
+    <button onclick="prender(2)">Prender LED 2</button>
+
+    <script>
+        function prender(led) {
+            fetch(`/prender/${led}/`)
+                .then(res => res.json())
+                .then(data => console.log(data));
+        }
+    </script>
 </body>
 </html>

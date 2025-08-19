@@ -25,3 +25,29 @@ def recortar_img(filename, dir_img_processed):
         c = conf[i] # Confianza
         crop = img[int(y1):int(y2), int(x1):int(x2)]
         cv2.imwrite(f'{dir_img_processed}/objeto_{i}.jpg', crop)
+
+def recortar_img_from_frame(img):
+    results = model.predict(source=img, device=device)
+
+    # Take first result (single image)
+    res = results[0]
+
+    # Extract bounding boxes, classes, confidence, names
+    boxes = res.boxes.xyxy.cpu().numpy()       # shape (N,4): x1,y1,x2,y2
+    classes = res.boxes.cls.cpu().numpy().astype(int)
+    conf = res.boxes.conf.cpu().numpy()
+    names = res.names
+
+    crops = []
+    for i, (x1, y1, x2, y2) in enumerate(boxes):
+        cls_name = names[classes[i]]
+        confidence = conf[i]
+        # Crop the image array, ensure indices are int and within bounds
+        crop_img = img[int(y1):int(y2), int(x1):int(x2)]
+        crops.append({
+            'bbox': (int(x1), int(y1), int(x2 - x1), int(y2 - y1)),
+            'class_name': cls_name,
+            'confidence': confidence,
+            'crop_img': crop_img
+        })
+    return crops

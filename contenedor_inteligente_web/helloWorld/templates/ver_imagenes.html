@@ -5,13 +5,14 @@
 </head>
 <body>
     <h1>Imagen base</h1>
-    <img src="{{ MEDIA_URL }}{{ imagen_base }}" alt="foto_0" width="500">
+    <div id="baseImage"></div>
+    <img id="baseImage" src="{{ imagen_base }}" alt="foto_0" width="500">
 
     <h2>Objetos detectados</h2>
     {% if objetos_y_predicciones %}
         {% for img, pred in objetos_y_predicciones %}
             <div style="display: inline-block; text-align: center; margin: 10px;">
-                <img src="{{ MEDIA_URL }}{{ img }}" alt="objeto" width="200">
+                <img src="{{ img }}" alt="objeto" width="200">
                 <p>{{ pred }}</p>
             </div>
         {% endfor %}

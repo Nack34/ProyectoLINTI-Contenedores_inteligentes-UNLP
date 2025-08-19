@@ -42,7 +42,36 @@ def clasificar_img(filename, output_dir):
 
     return (class_name, confidence_score)
 
+import cv2
 
+def clasificar_img_from_array(img_array):
+    """
+    img_array: numpy ndarray (BGR or RGB)
+    Returns: (class_name, confidence_score)
+    """
+    # Convert BGR (OpenCV) to RGB (PIL)
+    img_rgb = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb).convert("RGB")
+
+    # Preprocess same as before
+    input_shape = model.input_shape[1:]  # (224, 224, 3)
+    size = (input_shape[0], input_shape[1])
+
+    pil_img = ImageOps.fit(pil_img, size, Image.Resampling.LANCZOS)
+
+    data = np.ndarray(shape=(1, *input_shape), dtype=np.float32)
+    image_array = np.asarray(pil_img)
+    normalized_image_array = (image_array.astype(np.float32) / 127.5) - 1
+    data[0] = normalized_image_array
+
+    # Predict
+    prediction = model.predict(data)
+    index = np.argmax(prediction)
+
+    class_name = class_names[index]
+    confidence_score = prediction[0][index]
+
+    return class_name, confidence_score
 
 
 
