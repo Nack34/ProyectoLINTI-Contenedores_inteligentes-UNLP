@@ -1,19 +1,38 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Contenedor inteligente</title>
+    <link rel="stylesheet" href="{% static 'home.css' %}">
 </head>
 <body>
-    <h1> Hello  </h1>
-    <a href="{% url 'World' %}">Ir a World</a>
-    <a href="{% url 'ver_imagenes' %}">Ir a Ver Imagenes</a>
-    <a href="{% url 'video_feed' %}">Ir a Video Feed</a>
-    <img src="{% url 'video_feed' %}" width="640" height="480" />
+    <h1 class="title">Contenedor Inteligente :)</h1>
+    <h3 class="subtitle">¡Poné tu residuo en la cámara y presioná clasificar!</h3>
+    
+    <main>
+        <!-- <a href="{% url 'ver_imagenes' %}">Ir a Ver Imagenes</a> -->
+        <!-- <a href="{% url 'video_feed' %}">Ir a Video Feed</a> -->
+        <div class="left-panel">
+            <img src="{% url 'video_feed' %}" width="640" height="480" />
+            <button id="btn" onclick="predecir()">Clasificar</button>
+        </div>
 
-    <button onclick="prender(1)">Prender LED 1</button>
-    <button onclick="prender(2)">Prender LED 2</button>
+        <div class="right-panel">
+            <div>
+                <h1 style="text-decoration: underline;">Resultado</h1>
+                <h1 id="result"></h1>
+                <div id="loading" style="display: none;"></div>
+                <!-- <h1 id="loading" style="display: none;">Cargando...</h1> -->
+            </div>
+            <div class="qr" style="display: none;">
+                <img id="qr" alt="QR Code">
+                <h3>¡Escanea el código QR para ganar puntos!</h3>
+            </div>
+        </div>
+    </main>
 
     <script>
         function prender(led) {
@@ -21,6 +40,125 @@
                 .then(res => res.json())
                 .then(data => console.log(data));
         }
+
+        function predecir() {
+            fetch(`/start_analyzing`);
+            btn.disabled = true;
+            result.style.display = "none";
+            loading.style.display = "block";
+        }
+
+        const eventSource = new EventSource("/stream/result/");
+
+        eventSource.onmessage = function(event) {
+            document.getElementById("result").innerText = event.data;
+        };
+
+        const eventQR = new EventSource("/stream/qr/");
+
+        eventQR.onmessage = function(event) {
+            loadQr();
+            btn.disabled = false;
+            loading.style.display = "none";
+            result.style.display = "block";
+        };
+
+        async function loadQr() {
+            try {
+                const response = await fetch("{% url 'qr_code_view' %}");
+                if (!response.ok) return;  // if no result yet, don't show
+
+                const blob = await response.blob();
+                const imgUrl = URL.createObjectURL(blob);
+
+                const img = document.querySelector(".qr");
+                img.firstElementChild.src = imgUrl;
+                img.style.display = "block";
+
+                setTimeout(() => {
+                    img.style.display = "none";
+                    result.style.display = "none";
+                    URL.revokeObjectURL(imgUrl);  // free memory
+                }, 5000); // 5000 ms = 5 seconds
+            } catch (e) {
+                console.error("Could not load QR", e);
+            }
+        }
     </script>
+
+    <style>
+        *,
+        *::after,
+        *::before {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        main {
+            display: flex;
+            justify-content: center;
+        }
+
+        .title {
+            text-align: center;
+            margin-top: 5rem;
+            font-size: 3em;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-size: 1.3em;
+        }
+
+        #btn {
+            height: fit-content;
+            padding: 0.5rem 1rem;
+            margin-top: 1rem;
+            border: none;
+            border-radius: 5px;
+            background-color: lightblue;
+            font-weight: 600;
+            font-size: 1.2em;
+            width: 10rem;
+        }
+
+        #btn:hover {
+            background-color: rgb(128, 187, 207);
+            cursor: pointer;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin-left: 5rem;
+            text-align: center;
+            width: 25rem;
+        }
+
+        #loading {
+            width: 40px;
+            height: 40px;
+            border: 5px solid #f3f3f3; /* Light gray */
+            border-top: 5px solid #3498db; /* Blue */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto; /* center horizontally */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </body>
 </html>

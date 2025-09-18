@@ -5,6 +5,7 @@ from django.conf import settings
 
 def hello(requests):
     return render(requests, "home.html")
+
 def world(requests):
     return render(requests, "world.html")
 
@@ -48,6 +49,7 @@ import threading
 import json
 from image_processing.clasificar_objetos import clasificar_img_from_array
 from image_processing.recortar_objetos import recortar_img_from_frame
+from collections import Counter
 
 # This global or class will run your capture + detection loop
 class VideoCamera:
@@ -56,6 +58,10 @@ class VideoCamera:
         self.lock = threading.Lock()
         self.current_frame = None
         self.detections = []
+        self.total_detections = []
+        self.analyzing = False
+        self.result = ""
+        self.qr = False
 
     def get_frame(self):
         with self.lock:
@@ -65,9 +71,11 @@ class VideoCamera:
             return jpeg.tobytes()
 
     def update(self):
+        self.detections = []
+        self.total_detections = []
+
         frame_counter = 0
         skip_frames = 20
-        detections = []
         last_detections = []
 
         def detect_async(frame):
@@ -84,20 +92,42 @@ class VideoCamera:
 
             frame_counter += 1
 
-            if frame_counter % skip_frames == 0:
-                # Start detection in a separate thread
-                threading.Thread(target=detect_async, args=(frame.copy(),), daemon=True).start()
+            if self.analyzing:
+                if frame_counter % skip_frames == 0:
+                    # Start detection in a separate thread
+                    threading.Thread(target=detect_async, args=(frame.copy(),), daemon=True).start()
 
-            # Draw last known detections on current frame
-            for det in last_detections:
-                x, y, w, h = det['bbox']
-                label = det['label']
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-                cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+                # Draw last known detections on current frame
+                iter = []
+                for det in last_detections:
+                    x, y, w, h = det['bbox']
+                    label = det['label']
+                    iter.append(label)
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+                self.total_detections.append(iter)
 
             with self.lock:
                 self.current_frame = frame
                 self.detections = last_detections
+
+    def start_analyzing(self):
+        self.analyzing = True
+        threading.Timer(5.0, self.restart_analyzer).start()
+
+    def restart_analyzer(self):
+        self.analyzing = False
+        flat = [item for sublist in self.total_detections for item in sublist]
+        counter = Counter(flat)
+
+        try:
+            most_common, count = counter.most_common(1)[0]
+        except:
+            most_common = ""
+
+        self.qr = True
+        self.result = most_common
+        self.total_detections = []
 
     def __del__(self):
         self.cap.release()
@@ -113,6 +143,45 @@ def gen(camera):
 
 def video_feed(request):
     return StreamingHttpResponse(gen(camera), content_type='multipart/x-mixed-replace; boundary=frame')
+
+def start_analyzing(request):
+    camera.start_analyzing()
+    return HttpResponse(200)
+
+def stream_result(request):
+    """Stream result updates via SSE"""
+    def event_stream():
+        last_value = None
+        while True:
+            if camera.result != last_value:
+                last_value = camera.result
+                yield f"data: {camera.result}\n\n"
+            time.sleep(1)  # check every second
+
+    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+
+def stream_qr(request):
+    """Stream qr updates via SSE"""
+    def event_stream():
+        while True:
+            if camera.qr:
+                yield f"data: {camera.qr}\n\n"
+                camera.qr = False
+            time.sleep(1)  # check every second
+
+    return StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+
+import qrcode
+import io
+
+def qr_code_view(request):
+    # generate QR with result
+    img = qrcode.make(f"Operation ID: {camera.result}")
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return HttpResponse(buffer.getvalue(), content_type="image/png")
 
 def model_detect(frame):
     # 1) Detect object crops + boxes + initial class from detection model
@@ -188,8 +257,6 @@ def mandar(led_num):
             print(f"Número {dato} enviado.")
         else:
             print(f"Número invalido.")
-#            else:
- #               print("Por favor ingresá solo números enteros.")
 
         print("Conexión cerrada.")
 
