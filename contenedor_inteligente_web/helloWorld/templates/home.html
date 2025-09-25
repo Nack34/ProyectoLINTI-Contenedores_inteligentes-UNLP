@@ -9,12 +9,10 @@
     <link rel="stylesheet" href="{% static 'home.css' %}">
 </head>
 <body>
-    <h1 class="title">Contenedor Inteligente :)</h1>
-    <h3 class="subtitle">¡Poné tu residuo en la cámara y presioná clasificar!</h3>
+    <h1 class="title">Estación de residuos inteligente</h1>
+    <h3 class="subtitle">¡Poné tu residuo frente a la cámara y presioná clasificar!</h3>
     
     <main>
-        <!-- <a href="{% url 'ver_imagenes' %}">Ir a Ver Imagenes</a> -->
-        <!-- <a href="{% url 'video_feed' %}">Ir a Video Feed</a> -->
         <div class="left-panel">
             <img src="{% url 'video_feed' %}" width="640" height="480" />
             <button id="btn" onclick="predecir()">Clasificar</button>
@@ -25,7 +23,6 @@
                 <h1 style="text-decoration: underline;">Resultado</h1>
                 <h1 id="result"></h1>
                 <div id="loading" style="display: none;"></div>
-                <!-- <h1 id="loading" style="display: none;">Cargando...</h1> -->
             </div>
             <div class="qr" style="display: none;">
                 <img id="qr" alt="QR Code">
@@ -87,12 +84,18 @@
     </script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Freeman&family=Poetsen+One&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
         *,
         *::after,
         *::before {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        body {
+            font-family: "Roboto", sans-serif;
         }
 
         main {

@@ -82,11 +82,12 @@ class VideoCamera:
             nonlocal last_detections
             # Run detection in separate thread
             result = model_detect(frame)
-            print(f"Resultado: {result}")
             last_detections = result  # Save for future frames
 
         while True:
             ret, frame = self.cap.read()
+            if len(last_detections) == 0:
+                last_detections = model_detect(frame)
             if not ret:
                 continue
 
@@ -102,6 +103,7 @@ class VideoCamera:
                 for det in last_detections:
                     x, y, w, h = det['bbox']
                     label = det['label']
+                    label = en_to_es(det['label'])
                     iter.append(label)
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
                     cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
@@ -128,9 +130,46 @@ class VideoCamera:
         self.qr = True
         self.result = most_common
         self.total_detections = []
+        
+        if self.result != "":
+            led = str_to_num(self.result)
+            if (led != 0):
+                mandar(led)
 
     def __del__(self):
         self.cap.release()
+
+def en_to_es(label):
+    num = label[0]
+
+    match num:
+        case "0":
+            return "Carton"
+        case "1":
+            return "Vidrio"
+        case "2":
+            return "Metal"
+        case "3":
+            return "Papel"
+        case "4":
+            return "Plastico"
+        case "5":
+            return "Basura"
+        case _:
+            return label
+
+def str_to_num(label):
+    match label:
+        case "Carton":
+            return 1
+        case "Metal":
+            return 2
+        case "Papel":
+            return 3
+        case "Plastico":
+            return 4
+        case _:
+            return 0
 
 camera = VideoCamera()
 threading.Thread(target=camera.update, daemon=True).start()
@@ -232,7 +271,7 @@ def encontrar_arduino():
     
     return None
 
-puerto = encontrar_arduino()     
+puerto = encontrar_arduino()    
 baudrate = 9600
 
 arduino = serial.Serial(puerto, baudrate, timeout=1)
@@ -247,18 +286,19 @@ def mandar(led_num):
             print(f"Conectado a {puerto}.")
         else:
             print("No se encontró un Arduino UNO conectado.")
+            return
         
         dato = led_num
         if dato == 0:
             arduino.close()
+            print("Conexión cerrada.")
             return
         if int(dato) < 5:
             arduino.write((str (dato) + '\n').encode())
             print(f"Número {dato} enviado.")
         else:
             print(f"Número invalido.")
-
-        print("Conexión cerrada.")
+            return
 
     except serial.SerialException as e:
         print("Error al conectar con el puerto:", e)
