@@ -3,45 +3,8 @@ from django.http import HttpResponse
 import os
 from django.conf import settings
 
-def hello(requests):
+def home(requests):
     return render(requests, "home.html")
-
-def world(requests):
-    return render(requests, "world.html")
-
-def ver_imagenes(request):
-    base_dir = os.path.join(settings.MEDIA_ROOT, 'base')
-    processed_dir = os.path.join(settings.MEDIA_ROOT, 'processed', '0')
-    prediction_file = os.path.join(settings.MEDIA_ROOT, 'classified', '0', 'prediccion.txt')
-
-    imagen_base = f'{base_dir}/foto_0.jpg'
-    imagenes_objetos = []
-    predicciones = []
-
-    # Leer imágenes procesadas
-    if os.path.exists(processed_dir):
-        imagenes_objetos = [f'processed/0/{nombre}' for nombre in sorted(os.listdir(processed_dir)) 
-                           if nombre.lower().endswith(('.jpg', '.png', '.jpeg'))]
-
-    # Leer predicciones del archivo
-    if os.path.exists(prediction_file):
-        with open(prediction_file, 'r', encoding='utf-8') as f:
-            predicciones = [line.strip() for line in f.readlines()]
-    
-    # Asegurarnos de que ambas listas tengan la misma longitud
-    if len(imagenes_objetos) != len(predicciones):
-        # Si hay diferencia, truncar la lista más larga
-        min_length = min(len(imagenes_objetos), len(predicciones))
-        imagenes_objetos = imagenes_objetos[:min_length]
-        predicciones = predicciones[:min_length]
-
-    objetos_y_predicciones = list(zip(imagenes_objetos, predicciones))
-    
-    context = {
-        'imagen_base': imagen_base,
-        'objetos_y_predicciones': objetos_y_predicciones
-    }
-    return render(request, 'ver_imagenes.html', context)
 
 from django.http import StreamingHttpResponse
 import cv2
@@ -129,8 +92,6 @@ class VideoCamera:
 
     def restart_analyzer(self):
         self.analyzing = False
-        
-        #flat = [item for sublist in self.total_detections for item in sublist]
 
         max = 0
         res = ""
@@ -140,16 +101,6 @@ class VideoCamera:
             if aux > max:
                 max = aux
                 res = key
-
-        #counter = Counter(flat)
-        #counter.total()
-
-        #label = en_to_es(det['label'])
-
-        #try:
-            #most_common, count = counter.most_common(1)[0]
-        #except:
-            #most_common = ""
 
         self.qr = True
         self.result = en_to_es(res)
@@ -169,6 +120,23 @@ class VideoCamera:
 
     def __del__(self):
         self.cap.release()
+
+camera_instance = None
+camera_lock = threading.Lock()
+
+def get_camera():
+    """
+    Initializes and returns the singleton camera object.
+    """
+    global camera_instance
+    with camera_lock:
+        if camera_instance is None:
+            print("Initializing camera for the first time...")
+            camera_instance = VideoCamera()
+            # Start the background frame update thread
+            threading.Thread(target=camera_instance.update, daemon=True).start()
+            print("Camera initialized.")
+    return camera_instance
 
 def calc_area(box):
     x, y, w, h = box
@@ -223,25 +191,28 @@ def str_to_num(label):
         case _:
             return 0
 
-camera = VideoCamera()
-threading.Thread(target=camera.update, daemon=True).start()
+#camera = VideoCamera()
+#threading.Thread(target=camera.update, daemon=True).start()
 
-def gen(camera): 
-    while True: 
-        frame = camera.get_frame() 
-        if frame: 
+def gen():
+    camera = get_camera()
+    while True:
+        frame = camera.get_frame()
+        if frame:
             yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 def video_feed(request):
-    return StreamingHttpResponse(gen(camera), content_type='multipart/x-mixed-replace; boundary=frame')
+    return StreamingHttpResponse(gen(), content_type='multipart/x-mixed-replace; boundary=frame')
 
 def start_analyzing(request):
+    camera = get_camera() # Get the camera instance
     camera.start_analyzing()
     return HttpResponse(200)
 
 def stream_result(request):
     """Stream result updates via SSE"""
     def event_stream():
+        camera = get_camera()
         last_value = None
         while True:
             if camera.result != last_value:
@@ -254,6 +225,7 @@ def stream_result(request):
 def stream_qr(request):
     """Stream qr updates via SSE"""
     def event_stream():
+        camera = get_camera()
         while True:
             if camera.qr:
                 yield f"data: {camera.qr}\n\n"
@@ -266,6 +238,7 @@ import qrcode
 import io
 
 def qr_code_view(request):
+    camera = get_camera()
     # generate QR with result
     img = qrcode.make(f"Operation ID: {camera.result}")
     buffer = io.BytesIO()
@@ -293,15 +266,6 @@ def model_detect(frame):
 
     return detections
 
-from django.http import JsonResponse
-
-def prender_led(request, led_num):
-    try:
-        mandar(led_num)
-        return JsonResponse({"status": "ok", "led": led_num})
-    except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)})
-    
 import serial
 import serial.tools.list_ports as list_ports
 import time

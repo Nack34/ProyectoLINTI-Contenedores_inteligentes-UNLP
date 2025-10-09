@@ -9,8 +9,9 @@
     <link rel="stylesheet" href="{% static 'home.css' %}">
 </head>
 <body>
-    <h1 class="title">Estación de residuos inteligente</h1>
-    <h3 class="subtitle">¡Poné tu residuo frente a la cámara y presioná clasificar!</h3>
+    <div id="img-title">
+        <img src="{% static 'Residuos inteligentes-2.png' %}" alt="">
+    </div>
     
     <main>
         <div class="left-panel">
@@ -96,11 +97,27 @@
 
         body {
             font-family: "Roboto", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         main {
             display: flex;
             justify-content: center;
+        }
+
+        #img-title {
+            display: flex;
+            justify-content: center;
+            width: 45rem;
+            height: 20rem;
+        }
+
+        #img-title img {
+            width: 100%;
+            height: 100%;
+            object-fit:contain
         }
 
         .title {
