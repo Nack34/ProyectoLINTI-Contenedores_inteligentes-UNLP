@@ -72,7 +72,15 @@ class VideoCamera:
 
     def update(self):
         self.detections = []
-        self.total_detections = []
+        self.total_detections = {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        }
+        self.areas = []
 
         frame_counter = 0
         skip_frames = 20
@@ -102,12 +110,14 @@ class VideoCamera:
                 iter = []
                 for det in last_detections:
                     x, y, w, h = det['bbox']
+                    area = calc_area(det['bbox'])
                     label = det['label']
-                    label = en_to_es(det['label'])
-                    iter.append(label)
+                    self.total_detections[label[0]].append(area)
+
+                    #iter.append((label, area))
+                    label = en_to_es2(det['label'])
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
                     cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
-                self.total_detections.append(iter)
 
             with self.lock:
                 self.current_frame = frame
@@ -119,17 +129,38 @@ class VideoCamera:
 
     def restart_analyzer(self):
         self.analyzing = False
-        flat = [item for sublist in self.total_detections for item in sublist]
-        counter = Counter(flat)
+        
+        #flat = [item for sublist in self.total_detections for item in sublist]
 
-        try:
-            most_common, count = counter.most_common(1)[0]
-        except:
-            most_common = ""
+        max = 0
+        res = ""
+        for key, val in self.total_detections.items():
+            prom = (Counter(val).total() + 1) / (len(val) + 1)
+            aux = 0.4 * len(val) + 0.8 * prom
+            if aux > max:
+                max = aux
+                res = key
+
+        #counter = Counter(flat)
+        #counter.total()
+
+        #label = en_to_es(det['label'])
+
+        #try:
+            #most_common, count = counter.most_common(1)[0]
+        #except:
+            #most_common = ""
 
         self.qr = True
-        self.result = most_common
-        self.total_detections = []
+        self.result = en_to_es(res)
+        self.total_detections = {
+            "0": [],
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        }
         
         if self.result != "":
             led = str_to_num(self.result)
@@ -139,7 +170,28 @@ class VideoCamera:
     def __del__(self):
         self.cap.release()
 
+def calc_area(box):
+    x, y, w, h = box
+    return int(w) * int(h)
+
 def en_to_es(label):
+    match label:
+        case "0":
+            return "Carton"
+        case "1":
+            return "Vidrio"
+        case "2":
+            return "Metal"
+        case "3":
+            return "Papel"
+        case "4":
+            return "Plastico"
+        case "5":
+            return "Basura"
+        case _:
+            return label
+        
+def en_to_es2(label):
     num = label[0]
 
     match num:
