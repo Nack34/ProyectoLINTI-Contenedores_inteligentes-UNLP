@@ -4,16 +4,15 @@ from ultralytics import YOLO
 from tensorflow.keras.applications.efficientnet_v2 import preprocess_input
 
 trimmer_name = "best.pt"
-classification_name = "keras_model.h5"
 
 trimmer_model = os.path.join(os.path.dirname(__file__), os.path.join("trimmer", trimmer_name))
-classification_model = os.path.join(os.path.dirname(__file__), os.path.join("classification", classification_name))
 labels_txt = os.path.join(os.path.dirname(__file__), os.path.join("classification", "labels.txt"))
 
 
 def load_trimmer_model():
     return YOLO(trimmer_model)
 
+"""
 def load_classification_model():
     # MODIFIED: Define the custom_objects dictionary and pass it to load_model
     custom_objects = {'preprocess_input': preprocess_input}
@@ -27,3 +26,4 @@ def load_classification_model():
         class_names = f.readlines()
         
     return (model, class_names)
+"""

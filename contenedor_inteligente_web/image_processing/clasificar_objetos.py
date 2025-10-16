@@ -1,3 +1,5 @@
+"""
+
 from .models import load_classification_model
 import torch
 import numpy as np
@@ -58,10 +60,10 @@ import cv2
 
 def clasificar_img_from_array(img_array):
     model_loaded.wait()
-    """
+    
     img_array: numpy ndarray (BGR or RGB)
     Returns: (class_name, confidence_score)
-    """
+
     # Convert BGR (OpenCV) to RGB (PIL)
     img_rgb = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
     pil_img = Image.fromarray(img_rgb).convert("RGB")
@@ -93,3 +95,4 @@ def clasificar_img_from_array(img_array):
 
 
     
+"""

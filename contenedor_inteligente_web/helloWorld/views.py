@@ -16,7 +16,7 @@ from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
 
 # Local application imports
-from image_processing.clasificar_objetos import clasificar_img_from_array
+# from image_processing.clasificar_objetos import clasificar_img_from_array
 from image_processing.recortar_objetos import recortar_img_from_frame
 
 camera_w = 640
