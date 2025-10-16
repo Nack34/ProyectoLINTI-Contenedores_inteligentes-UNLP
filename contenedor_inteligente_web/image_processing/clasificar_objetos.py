@@ -4,11 +4,23 @@ import numpy as np
 from tensorflow.keras.preprocessing import image
 from PIL import Image, ImageOps  
 import os
+import threading
 
-model, class_names = load_classification_model()
+model = None
+class_names = None
+model_loaded = threading.Event()
+
+def load_model_in_background():
+    global model, class_names
+    model, class_names = load_classification_model()
+    model_loaded.set()
+
+threading.Thread(target=load_model_in_background, daemon=True).start()
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def clasificar_img(filename, output_dir):
+    model_loaded.wait()
     # 1. Cargar y preprocesar imagen
 
     # Crear un array con batch=1 y las demás dimensiones del input
@@ -45,6 +57,7 @@ def clasificar_img(filename, output_dir):
 import cv2
 
 def clasificar_img_from_array(img_array):
+    model_loaded.wait()
     """
     img_array: numpy ndarray (BGR or RGB)
     Returns: (class_name, confidence_score)

@@ -8,4 +8,5 @@ urlpatterns = [
     path("qr/", views.qr_code_view, name="qr_code_view"),
     path("stream/result/", views.stream_result, name="stream_result"),
     path("stream/qr/", views.stream_qr, name="stream_qr"),
+    path("stream/initial_prediction_status/", views.stream_initial_prediction_status, name="stream_initial_prediction_status"),
 ]

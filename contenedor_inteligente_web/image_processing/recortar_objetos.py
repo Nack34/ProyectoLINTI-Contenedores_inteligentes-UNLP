@@ -2,11 +2,22 @@ from .models import load_trimmer_model
 import torch
 import cv2
 import os
+import threading
 
-model = load_trimmer_model()
+model = None
+model_loaded = threading.Event()
+
+def load_model_in_background():
+    global model
+    model = load_trimmer_model()
+    model_loaded.set()
+
+threading.Thread(target=load_model_in_background, daemon=True).start()
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def recortar_img(filename, dir_img_processed):
+    model_loaded.wait()
     results = model.predict(source=filename, device=device)
 
     # Tomamos el primer resultado (una sola imagen procesada)
@@ -27,6 +38,7 @@ def recortar_img(filename, dir_img_processed):
         cv2.imwrite(f'{dir_img_processed}/objeto_{i}.jpg', crop)
 
 def recortar_img_from_frame(img):
+    model_loaded.wait()
     results = model.predict(source=img, device=device)
 
     # Take first result (single image)
