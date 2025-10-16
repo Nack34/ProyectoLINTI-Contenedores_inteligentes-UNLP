@@ -18,7 +18,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def recortar_img(filename, dir_img_processed):
     model_loaded.wait()
-    results = model.predict(source=filename, device=device)
+    results = model.predict(source=filename, device=device, show_labels=False, show_conf=False, show_boxes=False)
 
     # Tomamos el primer resultado (una sola imagen procesada)
     res = results[0]
