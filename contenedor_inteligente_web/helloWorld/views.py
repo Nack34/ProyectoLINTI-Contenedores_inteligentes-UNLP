@@ -1,31 +1,52 @@
-# Standard library imports
 import io
-import json
-import os
 import threading
 import time
-from collections import Counter
 
-# Third-party imports
 import cv2
 import qrcode
 import serial
 import serial.tools.list_ports as list_ports
-from django.conf import settings
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
 
-# Local application imports
 # from image_processing.clasificar_objetos import clasificar_img_from_array
 from image_processing.recortar_objetos import recortar_img_from_frame
 
 camera_w = 640
 camera_h = 480
+centro_camara = (camera_w / 2, camera_h / 2)
+
+# Colores para las detecciones de cada clase
+COLOR_MAP = {
+    'TRASH': (0, 0, 255),        # Rojo
+    'CARDBOARD': (42, 128, 244), # Naranja
+    'GLASS': (0, 255, 0),        # Verde
+    'METAL': (128, 0, 128),      # Violeta 
+    'PAPER': (240, 240, 0),      # Cian
+    'PLASTIC': (255, 0, 0)       # Azul
+}
+
+# Traducción de las clases del modelo
+LABEL_TRANSLATIONS = {
+    "CARDBOARD": "Carton",
+    "GLASS": "Vidrio",
+    "METAL": "Metal",
+    "PAPER": "Papel",
+    "PLASTIC": "Plastico",
+    "TRASH": "Basura"
+}
+
+# Traducción de las clases a los LED
+CLASS_TO_LED = {
+    "Carton": 1,
+    "Metal": 2,
+    "Papel": 3,
+    "Plastico": 4
+}
 
 def home(requests):
     return render(requests, "home.html")
 
-# This global or class will run your capture + detection loop
 class VideoCamera:
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
@@ -39,7 +60,7 @@ class VideoCamera:
         self.initial_prediction_done = False
 
     def release(self):
-        """Releases the camera hardware."""
+        """ Libera la cámara. """
         if self.cap.isOpened():
             self.cap.release()
 
@@ -53,20 +74,13 @@ class VideoCamera:
     def update(self):
         self.detections = []
         self.total_detections = {
-            "PLASTIC": [],
-            "PAPER": [],
-            "METAL": [],
-            "GLASS": [],
-            "CARDBOARD": [],
-            "TRASH": []
+            "PLASTIC": [], "PAPER": [], "METAL": [], "GLASS": [], "CARDBOARD": [], "TRASH": []
         }
         self.areas = []
 
         frame_counter = 0
         skip_frames = 20
         last_detections = []
-
-        initial_detection_started = False
 
         def detect_async(camera_obj, frame):
             nonlocal last_detections
@@ -76,14 +90,14 @@ class VideoCamera:
             if not camera_obj.initial_prediction_done:
                 camera_obj.initial_prediction_done = True
 
+        # Hago una primera clasificación
+        ret, frame = self.cap.read()
+        threading.Thread(target=detect_async, args=(self, frame.copy(),), daemon=True).start()
+
         while True:
             ret, frame = self.cap.read()
             if not ret:
                 continue
-
-            if not initial_detection_started:
-                initial_detection_started = True
-                threading.Thread(target=detect_async, args=(self, frame.copy(),), daemon=True).start()
 
             frame_counter += 1
 
@@ -92,17 +106,23 @@ class VideoCamera:
                     # Start detection in a separate thread
                     threading.Thread(target=detect_async, args=(self, frame.copy(),), daemon=True).start()
 
-                # Draw last known detections on current frame
                 for det in last_detections:
                     x, y, w, h = det['bbox']
                     area = calc_area(det['bbox'])
                     dist = calc_dist(det['bbox'])
-                    label = det['label']
-                    self.total_detections[label.rsplit(' ', 1)[0]].append((area, dist))
+                    label, confidence = det['label'].split(' ')
+                    self.total_detections[label].append((area, dist))
 
-                    label = get_spanish_label(det['label'])
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                    cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+                    color = COLOR_MAP.get(label, (255, 255, 255))
+                    label = LABEL_TRANSLATIONS.get(label, label)
+
+                    # Agrego los rectángulos y nombres de clases
+                    cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
+                    #cv2.putText(frame, f"{label} {confidence}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+                    (text_width, text_height), baseline = cv2.getTextSize(f"{label} {confidence}", cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+                    cv2.rectangle(frame, (x, y - text_height - 15), (x + text_width, y), color, -1)
+                    cv2.putText(frame, f"{label} {confidence}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
             with self.lock:
                 self.current_frame = frame
@@ -118,17 +138,11 @@ class VideoCamera:
         frame_area = 640 * 480
         total_detections = sum(len(v) for v in self.total_detections.values())
 
-        # Handle the case where nothing was detected to avoid errors
         if total_detections == 0:
             self.result = ""
             self.qr = True
             self.total_detections = {
-                "PLASTIC": [],
-                "PAPER": [],
-                "METAL": [],
-                "GLASS": [],
-                "CARDBOARD": [],
-                "TRASH": []
+                "PLASTIC": [], "PAPER": [], "METAL": [], "GLASS": [], "CARDBOARD": [], "TRASH": []
             }
             return
 
@@ -161,18 +175,13 @@ class VideoCamera:
                 res = key
 
         self.qr = True
-        self.result = get_spanish_label(res)
+        self.result = LABEL_TRANSLATIONS.get(res, res)
         self.total_detections = {
-            "PLASTIC": [],
-            "PAPER": [],
-            "METAL": [],
-            "GLASS": [],
-            "CARDBOARD": [],
-            "TRASH": []
+            "PLASTIC": [], "PAPER": [], "METAL": [], "GLASS": [], "CARDBOARD": [], "TRASH": []
         }
         
         if self.result != "":
-            led = str_to_num(self.result)
+            led = CLASS_TO_LED.get(self.result, 0)
             if (led != 0):
                 mandar(led)
 
@@ -183,59 +192,26 @@ camera_instance = None
 camera_lock = threading.Lock()
 
 def get_camera():
-    """
-    Initializes and returns the singleton camera object.
-    """
+    """ Retorna la instancia de la cámara. Si no está inicializada, la inicializa. """
     global camera_instance
     with camera_lock:
         if camera_instance is None:
             print("Initializing camera for the first time...")
             camera_instance = VideoCamera()
-            # Start the background frame update thread
             threading.Thread(target=camera_instance.update, daemon=True).start()
             print("Camera initialized.")
     return camera_instance
 
 def calc_area(box):
+    """ Calcula el área de la caja. """
     x, y, w, h = box
     return int(w) * int(h)
 
 def calc_dist(box):
+    """ Calcula la distancia entra el centro de la cámara y la esquina superior izquierda de la caja. """
     x, y, w, h = box
-    centro_camara = (camera_w / 2, camera_h / 2)
     distancia = ((centro_camara[0] - x) ** 2 + (centro_camara[1] - y) ** 2)
     return distancia
-
-def get_spanish_label(label):
-
-    match label:
-        case "CARDBOARD":
-            return "Carton"
-        case "GLASS":
-            return "Vidrio"
-        case "METAL":
-            return "Metal"
-        case "PAPER":
-            return "Papel"
-        case "PLASTIC":
-            return "Plastico"
-        case "TRASH":
-            return "Basura"
-        case _:
-            return label
-
-def str_to_num(label):
-    match label:
-        case "Carton":
-            return 1
-        case "Metal":
-            return 2
-        case "Papel":
-            return 3
-        case "Plastico":
-            return 4
-        case _:
-            return 0
 
 def gen():
     camera = get_camera()
@@ -248,7 +224,7 @@ def video_feed(request):
     return StreamingHttpResponse(gen(), content_type='multipart/x-mixed-replace; boundary=frame')
 
 def start_analyzing(request):
-    camera = get_camera() # Get the camera instance
+    camera = get_camera()
     camera.start_analyzing()
     return HttpResponse(200)
 
@@ -300,11 +276,8 @@ def qr_code_view(request):
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
 def model_detect(frame):
-    # The recortar_img_from_frame function now does everything.
-    # It returns a list of detections with both the box and the class name.
     detections_from_yolo = recortar_img_from_frame(frame)
     
-    # We'll reformat the output slightly to match what your old code expected
     detections = []
     for item in detections_from_yolo:
         detections.append({
@@ -336,6 +309,9 @@ arduino_instance = None
 arduino_lock = threading.Lock()
 
 def get_arduino():
+    """
+    Retorna la instancia de arduino y se conecta a uno, si no está conectado.
+    """
     global arduino_instance
     with arduino_lock:
         if arduino_instance is None:
@@ -352,6 +328,9 @@ def get_arduino():
     return arduino_instance
 
 def mandar(led_num):
+    """
+    Envía un número entre 1 y 4 al Arduino, para prender el LED correspondiente.
+    """
     arduino = get_arduino()
     if not arduino:
         return
