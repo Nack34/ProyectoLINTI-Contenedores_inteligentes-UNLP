@@ -8,6 +8,7 @@ import serial
 import serial.tools.list_ports as list_ports
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
+from ..api.models import Residuo
 
 # from image_processing.clasificar_objetos import clasificar_img_from_array
 from image_processing.recortar_objetos import recortar_img_from_frame
@@ -58,6 +59,7 @@ class VideoCamera:
         self.result = ""
         self.qr = False
         self.initial_prediction_done = False
+        self.id_residuo = None
 
     def release(self):
         """ Libera la cámara. """
@@ -118,7 +120,6 @@ class VideoCamera:
 
                     # Agrego los rectángulos y nombres de clases
                     cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
-                    #cv2.putText(frame, f"{label} {confidence}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
                     (text_width, text_height), baseline = cv2.getTextSize(f"{label} {confidence}", cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
                     cv2.rectangle(frame, (x, y - text_height - 15), (x + text_width, y), color, -1)
@@ -140,7 +141,7 @@ class VideoCamera:
 
         if total_detections == 0:
             self.result = ""
-            self.qr = True
+            self.qr = False
             self.total_detections = {
                 "PLASTIC": [], "PAPER": [], "METAL": [], "GLASS": [], "CARDBOARD": [], "TRASH": []
             }
@@ -174,8 +175,10 @@ class VideoCamera:
                 max_score = score
                 res = key
 
-        self.qr = True
         self.result = LABEL_TRANSLATIONS.get(res, res)
+        self.id_residuo = Residuo.objects.create(tipo_residuo=self.result).id
+        self.qr = True
+
         self.total_detections = {
             "PLASTIC": [], "PAPER": [], "METAL": [], "GLASS": [], "CARDBOARD": [], "TRASH": []
         }
@@ -268,7 +271,7 @@ def stream_initial_prediction_status(request):
 def qr_code_view(request):
     camera = get_camera()
     # generate QR with result
-    img = qrcode.make(f"Operation ID: {camera.result}")
+    img = qrcode.make(f"ID Residuo: {camera.id_residuo}")
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
