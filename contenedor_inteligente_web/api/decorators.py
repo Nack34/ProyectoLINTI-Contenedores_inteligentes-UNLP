@@ -1,6 +1,7 @@
 from functools import wraps
 from django.http import JsonResponse
-from rest_framework_simplejwt.tokens import AccessToken, InvalidToken
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import InvalidToken
 from django.contrib.auth.models import User
 
 def jwt_required(view_func):

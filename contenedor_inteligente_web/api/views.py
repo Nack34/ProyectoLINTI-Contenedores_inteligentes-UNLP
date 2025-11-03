@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Residuo, TipoResiduo
 from .decorators import jwt_required
+from django.core.signing import Signer, BadSignature
 
 def get_tokens_for_user(user):
     """
@@ -86,12 +87,21 @@ def agregar_residuo(request):
             
             user = request.user 
 
+            signer = Signer()
+            id_residuo = signer.unsign(id_residuo)
+
             residuo = Residuo.objects.get(id=id_residuo)
+
+            if residuo.user is not None:
+                return JsonResponse({'error': 'Este residuo ya fue reclamado.'}, status=400)
+
             residuo.user = user
             residuo.save()
             
             return JsonResponse({'message': 'Residuo agregado correctamente.'}, status=200)
         
+        except BadSignature:
+            return JsonResponse({'error': 'ID de residuo inválido o manipulado.'}, status=400)
         except Residuo.DoesNotExist:
              return JsonResponse({'error': 'Residuo not found.'}, status=404)
         except json.JSONDecodeError:

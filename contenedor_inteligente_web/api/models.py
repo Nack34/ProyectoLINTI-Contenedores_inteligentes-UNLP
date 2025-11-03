@@ -11,3 +11,6 @@ class TipoResiduo(models.Model):
   id = models.AutoField(primary_key=True)
   nombre = models.CharField(null=False, max_length=100, unique=True)
   puntos = models.IntegerField(null=False)
+
+  class Meta:
+    db_table = 'api_tipo_residuo'

@@ -8,7 +8,8 @@ import serial
 import serial.tools.list_ports as list_ports
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
-from ..api.models import Residuo
+from api.models import Residuo, TipoResiduo
+from django.core.signing import Signer
 
 # from image_processing.clasificar_objetos import clasificar_img_from_array
 from image_processing.recortar_objetos import recortar_img_from_frame
@@ -176,7 +177,10 @@ class VideoCamera:
                 res = key
 
         self.result = LABEL_TRANSLATIONS.get(res, res)
-        self.id_residuo = Residuo.objects.create(tipo_residuo=self.result).id
+        tipo_residuo = TipoResiduo.objects.get(nombre=self.result) # Busco el tipo de residuo
+        nuevo_residuo = Residuo.objects.create(tipo_residuo=tipo_residuo) # Creo un nuevo residuo
+        signer = Signer()
+        self.id_residuo = signer.sign(nuevo_residuo.id) # Firmo el ID del residuo antes de enviarlo en el qr
         self.qr = True
 
         self.total_detections = {
