@@ -4,9 +4,11 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Residuo, TipoResiduo
+from .models import Residuo, TipoResiduo, Estacion
 from .decorators import jwt_required
 from django.core.signing import Signer, BadSignature
+
+from django.db import models
 
 def get_tokens_for_user(user):
     """
@@ -19,6 +21,9 @@ def get_tokens_for_user(user):
         'access': str(refresh.access_token),
     }
 
+"""
+    USUARIOS
+"""
 @csrf_exempt
 def signup_api(request):
     if request.method == "POST":
@@ -41,7 +46,6 @@ def signup_api(request):
         
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-    return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
 
 @csrf_exempt
 def login_api(request):
@@ -61,7 +65,6 @@ def login_api(request):
         
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-    return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
 
 @csrf_exempt
 def logout_api(request):
@@ -75,8 +78,10 @@ def logout_api(request):
             return JsonResponse({'message': 'Successfully logged out.'}, status=200)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-    return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
 
+"""
+    RESIDUOS
+"""
 @csrf_exempt
 @jwt_required
 def agregar_residuo(request):
@@ -106,4 +111,101 @@ def agregar_residuo(request):
              return JsonResponse({'error': 'Residuo not found.'}, status=404)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-    return JsonResponse({'error': 'Only POST requests are allowed.'}, status=405)
+
+@csrf_exempt
+@jwt_required
+def get_puntos_usuario(request):
+    if request.method == "GET":
+        try:
+            data = json.loads(request.body)
+            id_user = data.get('id_user')
+            
+            if id_user is None:
+                return JsonResponse({'error': 'ID de usuario is required.'}, status=400)
+            
+            user = User.objects.get(id=id_user)
+            if user is None:
+                return JsonResponse({'error': 'User not found.'}, status=404)
+            
+            puntos = Residuo.objects.filter(user=user)
+            suma = puntos.aggregate(total_puntos=models.Sum('tipo_residuo__puntos'))
+            total = suma['total_puntos'] or 0
+
+            return JsonResponse({'puntos': total }, status=200)
+        except Exception:
+            return JsonResponse({'error': 'Internal server error.'}, status=500)
+
+@csrf_exempt
+@jwt_required
+def get_cant_por_tipo(request):
+    if request.method == "GET":
+        try:
+            data = list(
+                TipoResiduo.objects
+                    .annotate(cantidad=models.Count('residuo'))
+                    .values('nombre', 'cantidad')
+            )
+
+            return JsonResponse({'ranking': data}, status=200)
+        except Exception:
+            return JsonResponse({'error': 'Internal server error.'}, status=500)    
+
+@csrf_exempt
+@jwt_required
+def get_ranking(request):
+    if request.method == "GET":
+        try:
+            ranking_residuo = list(
+                Residuo.objects
+                    .filter(user__isnull=False)
+                    .values('user__username')
+                    .annotate(total_puntos=models.Sum('tipo_residuo__puntos'))
+                    .order_by('-total_puntos')[:10]
+            )
+
+            return JsonResponse({'ranking': ranking_residuo}, status=200)
+        except Exception:
+            return JsonResponse({'error': 'Internal server error.'}, status=500)
+
+@csrf_exempt
+@jwt_required
+def get_ranking_por_tipo(request):
+    if request.method == "GET":
+        try:
+            data = json.loads(request.body)
+            tipo_residuo = data.get('tipo_residuo')
+            if tipo_residuo is None:
+                return JsonResponse({'error': 'Tipo de residuo is required.'}, status=400)
+            
+            ranking_residuo = list(
+                Residuo.objects
+                    .filter(tipo_residuo__nombre=tipo_residuo, user__isnull=False)
+                    .values('user__username')
+                    .annotate(total_puntos=models.Sum('tipo_residuo__puntos'))
+                    .order_by('-total_puntos')[:10]
+            )
+
+            return JsonResponse({'ranking': ranking_residuo}, status=200)
+        except Exception:
+            return JsonResponse({'error': 'Internal server error.'}, status=500)
+
+"""
+    ESTACIONES
+"""
+@csrf_exempt
+@jwt_required
+def get_ubicacion_estacion(request):
+    if request.method == "GET":
+        try:
+            data = json.loads(request.body)
+            id_estacion = data.get('id_estacion')
+
+            if id_estacion is None:
+                return JsonResponse({'error': 'ID de estación is required.'}, status=400)
+            
+            estacion = Estacion.objects.get(id=id_estacion)
+            return JsonResponse({'latitud': estacion.latitud, 'longitud': estacion.longitud}, status=200)
+        except Estacion.DoesNotExist:
+            return JsonResponse({'error': 'Estación not encontrada.'}, status=404)
+        except Exception:
+            return JsonResponse({'error': 'Internal server error.'}, status=500)

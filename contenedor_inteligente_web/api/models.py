@@ -14,3 +14,12 @@ class TipoResiduo(models.Model):
 
   class Meta:
     db_table = 'api_tipo_residuo'
+
+class Estacion(models.Model):
+  id = models.AutoField(primary_key=True)
+  nombre = models.CharField(null=False, max_length=100, unique=True)
+  latitud = models.FloatField(null=False)
+  longitud = models.FloatField(null=False)
+
+  class Meta:
+    db_table = 'api_estacion'

@@ -5,6 +5,7 @@ import time
 import cv2
 import qrcode
 import serial
+import json
 import serial.tools.list_ports as list_ports
 from django.http import HttpResponse, StreamingHttpResponse
 from django.shortcuts import render
@@ -61,6 +62,7 @@ class VideoCamera:
         self.qr = False
         self.initial_prediction_done = False
         self.id_residuo = None
+        self.puntos_residuo = 0
 
     def release(self):
         """ Libera la cámara. """
@@ -179,6 +181,7 @@ class VideoCamera:
         self.result = LABEL_TRANSLATIONS.get(res, res)
         tipo_residuo = TipoResiduo.objects.get(nombre=self.result) # Busco el tipo de residuo
         nuevo_residuo = Residuo.objects.create(tipo_residuo=tipo_residuo) # Creo un nuevo residuo
+        self.puntos_residuo = tipo_residuo.puntos # Asigno los puntos del residuo
         signer = Signer()
         self.id_residuo = signer.sign(nuevo_residuo.id) # Firmo el ID del residuo antes de enviarlo en el qr
         self.qr = True
@@ -275,7 +278,14 @@ def stream_initial_prediction_status(request):
 def qr_code_view(request):
     camera = get_camera()
     # generate QR with result
-    img = qrcode.make(f"ID Residuo: {camera.id_residuo}")
+
+    python_dict = {
+        "ID Residuo": camera.id_residuo,
+        "Puntos": camera.puntos_residuo,
+    }
+
+    json_string = json.dumps(python_dict)
+    img = qrcode.make(json_string)
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     buffer.seek(0)
