@@ -6,7 +6,7 @@ import threading
 
 model = None
 model_loaded = threading.Event()
-inference_lock = threading.Lock()  # <--- NEW: Lock to prevent crashes
+inference_lock = threading.Lock()
 
 def load_model_in_background():
     global model
@@ -43,7 +43,7 @@ def recortar_img(filename, dir_img_processed):
 def recortar_img_from_frame(img):
     model_loaded.wait()
     
-    # NEW: Lock the model during prediction to prevent segmentation faults
+    # Lock the model during prediction to prevent segmentation faults
     with inference_lock:
         results = model.predict(source=img, device=device)
 
@@ -51,7 +51,7 @@ def recortar_img_from_frame(img):
     res = results[0]
 
     # Extract bounding boxes, classes, confidence, names
-    boxes = res.boxes.xyxy.cpu().numpy()       # shape (N,4): x1,y1,x2,y2
+    boxes = res.boxes.xyxy.cpu().numpy()
     classes = res.boxes.cls.cpu().numpy().astype(int)
     conf = res.boxes.conf.cpu().numpy()
     names = res.names

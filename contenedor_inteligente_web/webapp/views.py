@@ -9,7 +9,6 @@ import qrcode
 import serial
 import serial.tools.list_ports as list_ports
 
-# REMOVED: StreamingHttpResponse (this fixes the warning)
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from api.models import Residuo, TipoResiduo
@@ -48,7 +47,6 @@ CLASS_TO_LED = {
     "Plastico": 4
 }
 
-# --- State Management ---
 class ClassificationState:
     def __init__(self):
         self.lock = threading.Lock()
@@ -72,8 +70,6 @@ class ClassificationState:
             self.start_time = time.time()
 
 classifier_state = ClassificationState()
-
-# --- Views ---
 
 def home(requests):
     return render(requests, "home.html")
@@ -107,7 +103,6 @@ def process_frame(request):
         qr_ready = False
         
         with classifier_state.lock:
-            # 1. STOP CLASSIFYING IF NOT ANALYZING
             if classifier_state.analyzing:
                 detections = model_detect(frame)
 
@@ -242,8 +237,6 @@ def calc_dist(box):
     x, y, w, h = box
     distancia = ((centro_camara[0] - x) ** 2 + (centro_camara[1] - y) ** 2)
     return distancia
-
-# --- Arduino Logic ---
 
 def encontrar_arduino():
     dispositivos_arduino = [

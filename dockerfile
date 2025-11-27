@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# 1. Instalación de dependencias pesadas (Torch CPU)
+# Instalación de dependencias pesadas
 RUN pip install --no-cache-dir \
     "torch==2.3.1+cpu" \
     "torchvision==0.18.1+cpu" \
@@ -22,27 +22,22 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     --extra-index-url https://pypi.org/simple
 
-# 2. Resto de requerimientos
+# Resto de requerimientos
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# --- CLEANUP STEP (Modified) ---
 # Removed the deletion of "test" folders to prevent breaking Django
 RUN find /opt/venv -name "__pycache__" -type d -exec rm -rf {} + \
     && find /opt/venv -name "*.pyc" -delete \
     && find /opt/venv -name "tests" -type d -exec rm -rf {} + \
-    # REMOVED: && find /opt/venv -name "test" -type d -exec rm -rf {} + \
     && pip uninstall -y pip setuptools \
     && find /opt/venv -name "*.so" -exec strip --strip-unneeded {} + || true
 
-# 3. Copiamos el código
 COPY contenedor_inteligente_web/ .
 
-# 4. Recopilamos estáticos
 RUN python manage.py collectstatic --noinput
 
 
-# --- Etapa 2: Final ---
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1

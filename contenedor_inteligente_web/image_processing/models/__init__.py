@@ -9,7 +9,6 @@ def load_trimmer_model():
     model = YOLO(trimmer_model)
     
     for m in model.modules():
-        # Add this check:
         if hasattr(m, 'bn') and m.bn is not None:
             m.bn.track_running_stats = False
             

@@ -14,7 +14,7 @@ const captureCtx = captureCanvas.getContext('2d');
 
 let isLoopRunning = false;
 let qrLoaded = false; 
-let qrTimer = null; // NEW: Global variable to manage the cleanup timer
+let qrTimer = null;
 
 async function initCamera() {
     try {
@@ -109,21 +109,16 @@ function drawDetections(detections) {
 
 function handleServerState(data) {
     if (data.final_result) {
-        // 1. STOP THE LOOP
         isLoopRunning = false;
         
-        // 2. Clear visual elements
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 3. Show Result
         resultEl.innerText = data.final_result;
         resultEl.style.display = "block";
         loading.style.display = "none";
         
-        // 4. RE-ENABLE BUTTON IMMEDIATELY (Key Change)
         btn.disabled = false;
         
-        // 5. Trigger QR sequence
         if (data.qr_ready && !qrLoaded) {
             qrLoaded = true;
             loadQr();
@@ -139,7 +134,6 @@ function startClassification() {
     qrContainer.style.display = "none"; 
     qrLoaded = false; 
 
-    // NEW: If a previous QR timer is running, cancel it so it doesn't close the new one later
     if (qrTimer) {
         clearTimeout(qrTimer);
         qrTimer = null;
@@ -168,8 +162,6 @@ async function loadQr() {
         qrContainer.querySelector("#qr").src = imgUrl;
         qrContainer.style.display = "block";
         
-        // NEW LOGIC: Non-blocking timer
-        // We set a timer to hide it in the future, but we exit this function immediately.
         qrTimer = setTimeout(() => {
             qrContainer.style.display = "none";
             resultEl.style.display = "none";
@@ -180,7 +172,6 @@ async function loadQr() {
     } catch (e) {
         console.error("Could not load QR", e);
     } 
-    // Removed "finally" block because button enablement is now handled in handleServerState
 }
 
 initCamera();
