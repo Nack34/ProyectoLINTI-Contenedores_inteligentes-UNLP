@@ -62,12 +62,30 @@ header {
   flex-basis: 60%;
 }
 
-.video-feed {
-  border: 1px solid #ddd;
+/* --- NEW VIDEO WRAPPER STYLES --- */
+.video-wrapper {
+  position: relative;
+  width: 640px;
+  height: 480px;
+  margin: 0 auto;
+  background-color: #000;
   border-radius: 8px;
+  overflow: hidden; /* Ensures rounded corners clip the video */
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.video-feed, .overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: auto;
-  max-width: 640px;
+  height: 100%;
+}
+
+/* Ensure the canvas is on top for drawing boxes */
+.overlay-canvas {
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass through */
 }
 
 #btn {
@@ -121,13 +139,28 @@ header {
   margin: 20px auto;
 }
 
+/* --- QR CODE STYLES --- */
 .qr {
-  margin-top: 2rem;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#qr {
+  width: 350px;  /* Fixed small width */
+  height: 350px; /* Fixed small height */
+  object-fit: contain; /* Ensures image doesn't stretch */
+  background-color: white; 
+  padding: 10px;
 }
 
 .qr h3 {
-  margin-top: 1rem;
   font-size: 1rem;
+  margin-top: 10px;
+  text-align: center;
+  color: #333;
   font-weight: 400;
 }
 
@@ -148,5 +181,11 @@ header {
   .panel {
     width: 100%;
     max-width: 640px;
+  }
+  /* Responsive adjustments for mobile video */
+  .video-wrapper {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
   }
 }

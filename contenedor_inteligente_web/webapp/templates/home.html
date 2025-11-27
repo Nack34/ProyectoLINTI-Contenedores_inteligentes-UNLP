@@ -16,8 +16,13 @@
     
     <main class="container">
         <section class="panel video-section">
-            <img src="{% url 'video_feed' %}" class="video-feed" width="640" height="480" />
-            <button id="btn" onclick="predecir()" disabled>Clasificar</button>
+            <!-- New Container for Video and Canvas Overlay -->
+            <div class="video-wrapper">
+                <video id="webcam" class="video-feed" autoplay playsinline muted></video>
+                <canvas id="overlay" class="overlay-canvas" width="640" height="480"></canvas>
+            </div>
+            
+            <button id="btn" onclick="startClassification()" disabled>Clasificar</button>
         </section>
 
         <section class="panel results-section">
@@ -26,11 +31,15 @@
                 <h2 id="result"></h2>
                 <div id="loading" style="display: none;"></div>
             </div>
+            <!-- The QR container is here, now styled with CSS above -->
             <div class="qr" style="display: none;">
                 <img id="qr" alt="QR Code">
                 <h3>¡Escanea el código QR para ganar puntos!</h3>
             </div>
         </section>
+        
+        <!-- CSRF Token for JS -->
+        {% csrf_token %}
         <script src="{% static 'home.js' %}"></script>
     </main>
 </body>

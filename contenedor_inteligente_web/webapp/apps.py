@@ -20,9 +20,9 @@ def shutdown_handler(signum, frame):
         print("Camera released. ✅")
     sys.exit(0)
 
-class HelloworldConfig(AppConfig):
+class WebappConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'helloWorld'
+    name = 'webapp'
 
     def ready(self):
         """

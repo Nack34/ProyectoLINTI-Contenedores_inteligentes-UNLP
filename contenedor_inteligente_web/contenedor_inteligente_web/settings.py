@@ -28,14 +28,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'pictures')
 SECRET_KEY = 'django-insecure-j!$)sdyr_b3_#@876$-4t2l_s4xv3bk&-sbe589=f)ah1bn4!w'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 
 # Application definition
 
 INSTALLED_APPS = [
-    'helloWorld.apps.HelloworldConfig',
+    'webapp.apps.WebappConfig',
     'api',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -64,6 +64,7 @@ SPECTACULAR_SETTINGS = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -146,6 +147,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

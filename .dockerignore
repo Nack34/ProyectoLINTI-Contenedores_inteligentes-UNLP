@@ -1,0 +1,14 @@
+**/__pycache__
+*.pyc
+
+# Entornos y dependencias locales
+env_*/
+env_common.yml
+env_cpu_extra.yml
+env_gpu_extra.yml
+manage_env.sh
+
+# Git y configuraciones de editor
+.git
+.gitignore
+.vscode/

@@ -6,6 +6,7 @@ import threading
 
 model = None
 model_loaded = threading.Event()
+inference_lock = threading.Lock()  # <--- NEW: Lock to prevent crashes
 
 def load_model_in_background():
     global model
@@ -18,7 +19,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def recortar_img(filename, dir_img_processed):
     model_loaded.wait()
-    results = model.predict(source=filename, device=device, show_labels=False, show_conf=False, show_boxes=False)
+    # Protect inference with lock
+    with inference_lock:
+        results = model.predict(source=filename, device=device, show_labels=False, show_conf=False, show_boxes=False)
 
     # Tomamos el primer resultado (una sola imagen procesada)
     res = results[0]
@@ -29,17 +32,20 @@ def recortar_img(filename, dir_img_processed):
     conf = res.boxes.conf.cpu().numpy()
     names = res.names
 
-    img = res.orig_img  # numpy array BGR o RGB según versión
+    img = res.orig_img
 
     for i, (x1, y1, x2, y2) in enumerate(boxes):
-        cls = names[classes[i]]  # ej. "dog"
-        c = conf[i] # Confianza
+        cls = names[classes[i]]
+        c = conf[i]
         crop = img[int(y1):int(y2), int(x1):int(x2)]
         cv2.imwrite(f'{dir_img_processed}/objeto_{i}.jpg', crop)
 
 def recortar_img_from_frame(img):
     model_loaded.wait()
-    results = model.predict(source=img, device=device)
+    
+    # NEW: Lock the model during prediction to prevent segmentation faults
+    with inference_lock:
+        results = model.predict(source=img, device=device)
 
     # Take first result (single image)
     res = results[0]
