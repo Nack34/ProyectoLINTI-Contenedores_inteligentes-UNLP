@@ -1,7 +1,6 @@
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
-from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, extend_schema_view
 from api.serializers import (
     UserCreationSerializer, 
     LoginSerializer, 
@@ -11,7 +10,9 @@ from api.serializers import (
     ErrorSerializer
 )
 
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
@@ -191,3 +192,27 @@ def logout_api(request):
         return Response({'message': 'Logout exitoso.'}, status=status.HTTP_200_OK)
     except TokenError:
         return Response({'error': 'Token inválido o expirado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+@extend_schema_view(
+    post=extend_schema(
+        summary="Refrescar Token",
+        description="Obtiene un nuevo token de acceso (access token) enviando un token de refresco (refresh token) válido.",
+        tags=['Autenticación'],
+        request=TokenRefreshSerializer,
+        responses={
+            200: OpenApiResponse(
+                description="Token refrescado exitosamente.",
+                response=TokenRefreshSerializer,
+                examples=[
+                    OpenApiExample(
+                        'Ejemplo de Respuesta',
+                        value={'access': 'eyJhbGciOiJIUzI1NiI... (nuevo access token)'}
+                    )
+                ]
+            ),
+            401: OpenApiResponse(description="El token de refresco es inválido o ha expirado."),
+        }
+    )
+)
+class DecoratedTokenRefreshView(TokenRefreshView):
+    pass

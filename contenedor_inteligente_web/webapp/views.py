@@ -156,8 +156,6 @@ def qr_code_view(request):
 
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
-# --- Helper Logic ---
-
 def model_detect(frame):
     detections_from_yolo = recortar_img_from_frame(frame)
     detections = []
@@ -178,8 +176,6 @@ def model_detect(frame):
     return detections
 
 def finalize_result():
-    frame_area = camera_w * camera_h 
-    
     total_count = sum(len(v) for v in classifier_state.total_detections.values())
 
     if total_count == 0:
@@ -195,14 +191,11 @@ def finalize_result():
         if frequency == 0:
             continue
 
-        areas = [v[0] for v in val]
         dists = [v[1] for v in val]
 
-        average_area = sum(areas) / frequency
         average_dist = sum(dists) / frequency
 
         normalized_frequency = frequency / total_count
-        normalized_area = average_area / frame_area
         normalized_dist = average_dist / (camera_w * camera_h)
 
         score = (0.4 * normalized_frequency) + (0.8 * (1 - normalized_dist))
@@ -219,7 +212,11 @@ def finalize_result():
         classifier_state.puntos_residuo = tipo_residuo.puntos
         signer = Signer()
         classifier_state.id_residuo = signer.sign(nuevo_residuo.id)
-        classifier_state.qr_ready = True
+
+        if classifier_state.result == "Basura":
+            classifier_state.qr_ready = False
+        else:
+            classifier_state.qr_ready = True
         
         led = CLASS_TO_LED.get(classifier_state.result, 0)
         if led != 0:

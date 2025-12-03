@@ -90,7 +90,7 @@ class RankingEntrySerializer(serializers.Serializer):
     """
     Describe una entrada individual en la lista del ranking.
     """
-    username = serializers.CharField(source='user__username')
+    username = serializers.CharField() 
     total_puntos = serializers.IntegerField()
 
 class PosicionRankingSerializer(serializers.Serializer):

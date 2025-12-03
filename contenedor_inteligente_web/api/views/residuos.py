@@ -4,6 +4,7 @@ from django.core.signing import Signer, BadSignature
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, OpenApiParameter
 from django.shortcuts import get_object_or_404
+from django.http import Http404
 from api.serializers import (
     SignedResiduoRequestSerializer,
     SuccessMessageSerializer,
@@ -18,9 +19,8 @@ from rest_framework import status
 
 from django.db import models
 
-
 @extend_schema(
-    summary="Asociar (reclamar) un residuo",
+    summary="Reclamar un residuo",
     description="Asocia un residuo (creado por la estación) con el usuario "
                 "autenticado que escaneó el código QR.",
     tags=['Residuos'],
@@ -78,7 +78,7 @@ from django.db import models
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def agregar_residuo(request):
+def reclamar_residuo(request):
     """
     Asocia un residuo con un usuario, validando un ID firmado.
     """
@@ -137,7 +137,7 @@ def agregar_residuo(request):
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_total_residuos(request):
+def total_residuos(request):
     """
     Cuenta cuántos residuos hay de cada tipo en la base de datos.
     """
@@ -153,16 +153,16 @@ def get_total_residuos(request):
 
 @extend_schema(
     summary="Obtener totales de residuos por usuario",
-    description="Devuelve una lista con la cantidad de residuos reciclados por un usuario, desglosado por tipo. Incluye tipos con cantidad 0.",
+    description="Devuelve una lista con la cantidad de residuos reciclados por un usuario específico, desglosado por tipo.",
     tags=['Residuos'],
     parameters=[
         OpenApiParameter(
-            name='id_user', 
+            name='id_usuario',
             description='El ID del usuario a consultar.',
-            required=True, 
+            required=True,
             type=int,
-            location=OpenApiParameter.QUERY,
-            examples=[OpenApiExample('ID de Ejemplo', value=1)]
+            location=OpenApiParameter.PATH,
+            examples=[OpenApiExample('ID Usuario', value=5)]
         )
     ],
     responses={
@@ -171,7 +171,7 @@ def get_total_residuos(request):
             description="Lista de conteos por tipo.",
             examples=[
                 OpenApiExample(
-                    'Ejemplo de Respuesta (con ceros)',
+                    'Ejemplo de Respuesta',
                     summary='Totales del usuario',
                     value=[
                         {"nombre": "Plastico", "cantidad": 12},
@@ -184,32 +184,25 @@ def get_total_residuos(request):
                 )
             ]
         ),
-        400: OpenApiResponse(
-            response=ErrorSerializer, 
-            description="Parámetro 'id_user' faltante.",
-            examples=[
-                OpenApiExample(
-                    'Error: Falta ID',
-                    value={"error": "Parámetro 'id_user' faltante.."}
-                )
-            ]
+        404: OpenApiResponse(
+            response=ErrorSerializer,
+            description="Usuario no encontrado.",
+            examples=[OpenApiExample('Error', value={"error": "Usuario no encontrado."})]
         )
     }
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_total_residuos_por_usuario(request):
+def total_residuos_por_usuario(request, id_usuario):
+    """
+    Devuelve la cantidad de residuos por tipo para un usuario específico.
+    """
     try:
-        id_user = request.query_params.get('id_user')
-
-        if not id_user:
-            return Response({'error': 'El parámetro "id_user" es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        target_user = get_object_or_404(User, id=id_usuario)
         
-        target_user = get_object_or_404(User, id=id_user)
-        id_user = target_user.id
-
-        data = (TipoResiduo.objects
-            .annotate(cantidad=models.Count('residuo', filter=models.Q(residuo__user__id=id_user)))
+        data = (
+            TipoResiduo.objects
+            .annotate(cantidad=models.Count('residuo', filter=models.Q(residuo__user=target_user)))
             .values('nombre', 'cantidad')
             .order_by('-cantidad')
         )
@@ -217,7 +210,7 @@ def get_total_residuos_por_usuario(request):
         serializer = TotalResiduosSerializer(data, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    except ValueError:
-        return Response({'error': 'ID inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+    except Http404:
+        return Response({'error': 'Usuario no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': f'Error interno: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
