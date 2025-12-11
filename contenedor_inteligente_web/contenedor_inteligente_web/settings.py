@@ -32,6 +32,13 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '*']
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# Permitir que el botón "Try it out" funcione en Swagger
+CSRF_TRUSTED_ORIGINS = ['https://*.github.dev', 'https://*.app.github.dev']
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -57,7 +64,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Estación Inteligente API',
+    'TITLE': 'Estacion Inteligente API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

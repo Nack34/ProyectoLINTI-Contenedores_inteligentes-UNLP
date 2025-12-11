@@ -3,6 +3,8 @@ from api.models import Residuo
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.http import Http404
+from django.utils import timezone
+from datetime import timedelta
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -147,6 +149,70 @@ def get_ranking(request):
     except Exception as e:
         return Response({'error': f'Error interno: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema(
+    summary="Obtener Ranking Semanal (Top 10)",
+    description="Devuelve el top 10 de usuarios con más puntos en la semana actual (desde el lunes). Opcionalmente se puede filtrar por tipo de residuo.",
+    tags=['Ranking'],
+    parameters=[
+        OpenApiParameter(
+            name='tipo_residuo', 
+            description='(Opcional) Filtrar por tipo de residuo (ej. "Plastico", "Carton"). Si se omite, es el ranking global semanal.', 
+            required=False, 
+            type=str,
+            location=OpenApiParameter.QUERY,
+            examples=[OpenApiExample('Filtrar', value='Plastico')]
+        )
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=RankingEntrySerializer(many=True),
+            description="Lista del Top 10 Semanal.",
+            examples=[
+                OpenApiExample(
+                    'Ranking Semanal',
+                    value=[
+                        {"username": "reciclador_pro", "total_puntos": 300},
+                        {"username": "eco_amigo", "total_puntos": 150}
+                    ]
+                )
+            ]
+        ),
+        400: OpenApiResponse(description="Parámetros inválidos.")
+    }
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_ranking_semanal(request):
+    """
+    Devuelve el top 10 de usuarios de la semana actual.
+    """
+    try:
+        tipo_residuo = request.query_params.get('tipo_residuo')
+
+        if tipo_residuo is not None and tipo_residuo not in ['Plastico', 'Vidrio', 'Carton', 'Metal', 'Papel', 'Basura']:
+            return Response({'error': 'El parámetro tipo_residuo es inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        start_of_week = now - timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        queryset = Residuo.objects.filter(user__isnull=False, fecha_carga__gte=start_of_week)
+
+        if tipo_residuo:
+            queryset = queryset.filter(tipo_residuo__nombre=tipo_residuo)
+
+        ranking_data = (
+            queryset
+            .values(username=models.F('user__username'))
+            .annotate(total_puntos=models.Sum('tipo_residuo__puntos'))
+            .order_by('-total_puntos')[:10]
+        )
+
+        serializer = RankingEntrySerializer(ranking_data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': f'Error interno: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @extend_schema(
     summary="Obtener Posición en Ranking",

@@ -1,11 +1,13 @@
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiResponse, extend_schema_view
+from django.contrib.auth.models import User
 from api.serializers import (
     UserCreationSerializer, 
     LoginSerializer, 
     TokenSerializer,
     RefreshTokenSerializer,
+    UserDataSerializer,
     SuccessMessageSerializer,
     ErrorSerializer
 )
@@ -13,7 +15,7 @@ from api.serializers import (
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -216,3 +218,39 @@ def logout_api(request):
 )
 class DecoratedTokenRefreshView(TokenRefreshView):
     pass
+
+@extend_schema(
+    summary="Obtener datos del usuario",
+    description="Obtiene los datos básicos del usuario autenticado.",
+    tags=['Autenticación'],
+    responses={
+        200: OpenApiResponse(
+            response=UserDataSerializer,
+            description="Datos del usuario autenticado.",
+            examples=[
+                OpenApiExample(
+                    'Ejemplo de usurio',
+                    summary='Datos de un usuario de ejemplo',
+                    value=[
+                        {
+                            'id': 1,
+                            'username': 'usuario_ejemplo'
+                        }
+                    ]
+                )
+            ]
+        )
+    }
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_data(request):
+    try:
+        user = request.user
+
+        return Response({
+            'id': user.id,
+            'username': user.username
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': f'{e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

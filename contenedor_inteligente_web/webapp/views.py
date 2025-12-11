@@ -146,6 +146,7 @@ def qr_code_view(request):
     python_dict = {
         "ID Residuo": classifier_state.id_residuo,
         "Puntos": classifier_state.puntos_residuo,
+        "Tipo Residuo": classifier_state.result
     }
 
     json_string = json.dumps(python_dict)

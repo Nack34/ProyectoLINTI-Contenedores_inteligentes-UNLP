@@ -62,6 +62,13 @@ class RefreshTokenSerializer(serializers.Serializer):
     """
     refresh = serializers.CharField(required=True)
 
+class UserDataSerializer(serializers.Serializer):
+    """
+    Serializer para devolver los datos del usuario autenticado.
+    """
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+
 """
   Residuos
 """

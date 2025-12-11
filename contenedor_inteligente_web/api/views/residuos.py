@@ -112,6 +112,7 @@ def reclamar_residuo(request):
 
 @extend_schema(
     summary="Obtener totales por tipo de residuo",
+    operation_id="get_residuos",
     description="Devuelve una lista con la cantidad total de residuos reciclados para cada categoría.",
     tags=['Residuos'],
     responses={
@@ -153,6 +154,7 @@ def total_residuos(request):
 
 @extend_schema(
     summary="Obtener totales de residuos por usuario",
+    operation_id="get_residuos_por_usuario",
     description="Devuelve una lista con la cantidad de residuos reciclados por un usuario específico, desglosado por tipo.",
     tags=['Residuos'],
     parameters=[

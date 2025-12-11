@@ -10,6 +10,7 @@ from api.serializers import EstacionSerializer, ErrorSerializer
 
 @extend_schema(
     summary="Obtener lista de estaciones",
+    operation_id="get_estaciones",
     description="Devuelve una lista de todas las estaciones de residuos disponibles.",
     tags=['Estaciones'],
     responses={
@@ -56,6 +57,7 @@ def get_ubicacion_estaciones(request):
 
 @extend_schema(
     summary="Obtener detalles de una estación",
+    operation_id="get_estacion",
     description="Devuelve la ubicación (latitud/longitud) y el nombre de una estación específica.",
     tags=['Estaciones'],
     parameters=[
